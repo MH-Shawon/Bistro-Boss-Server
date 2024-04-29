@@ -24,6 +24,7 @@ async function run() {
     const menuCollection = client.db("RestaurantDB").collection("menu");
     const reviewCollection = client.db("RestaurantDB").collection("reviews");
     const cartCollection = client.db("RestaurantDB").collection("carts");
+    const userCollection = client.db("RestaurantDB").collection("users");
 
     app.get("/menu", async (req, res) => {
       const menu = await menuCollection.find().toArray();
@@ -46,12 +47,24 @@ async function run() {
       res.send(result);
     });
 
-    app.delete('/carts/:id', async(req,res)=>{
+    app.delete("/carts/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const result = await cartCollection.deleteOne(query);
-      res.send(result)
-    })
+      res.send(result);
+    });
+
+    // user related api
+
+    app.post("/users", async (req, res) => {
+      const users = req.body;
+      const result = await userCollection.insertOne(users);
+      res.send(result);
+    });
+    app.get("/users", async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
 
     client.db("admin").command({ ping: 1 });
     console.log(
