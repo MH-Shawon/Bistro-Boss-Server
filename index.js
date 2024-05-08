@@ -67,10 +67,19 @@ async function run() {
       next();
     };
 
+    // menu related api 
+
     app.get("/menu", async (req, res) => {
       const menu = await menuCollection.find().toArray();
       res.send(menu);
     });
+    app.post('/menu', async(req,res)=>{
+      const menu = req.body;
+      const result= await menuCollection.insertOne(menu);
+      res.send(result);
+    })
+
+    // review related api 
     app.get("/reviews", async (req, res) => {
       const menu = await reviewCollection.find().toArray();
       res.send(menu);
@@ -108,12 +117,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users",verifyToken,verifyAdmin, async (req, res) => {
+    app.get("/users", async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
 
-    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+    app.get("/users/admin/:email", async (req, res) => {
       const email = req.params.email;
 
       if (email !== req.decoded.email) {
