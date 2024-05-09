@@ -4,6 +4,7 @@ const app = express();
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const e = require("express");
 const port = process.env.PORT || 5000;
 
 app.use(cors());
@@ -67,19 +68,46 @@ async function run() {
       next();
     };
 
-    // menu related api 
+    // menu related api
 
     app.get("/menu", async (req, res) => {
       const menu = await menuCollection.find().toArray();
       res.send(menu);
     });
-    app.post('/menu', async(req,res)=>{
+    app.post("/menu", async (req, res) => {
       const menu = req.body;
-      const result= await menuCollection.insertOne(menu);
+      const result = await menuCollection.insertOne(menu);
       res.send(result);
-    })
+    });
+    app.delete("/menu/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await menuCollection.deleteOne(query);
+      res.send(result);
+    });
+    app.get("/menu/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await menuCollection.findOne(query);
+      res.send(result);
+    });
+    app.put("/menu/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedMenu = req.body;
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: { ...updatedMenu },
+      };
+      const result = await menuCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
 
-    // review related api 
+    // review related api
     app.get("/reviews", async (req, res) => {
       const menu = await reviewCollection.find().toArray();
       res.send(menu);
@@ -138,7 +166,6 @@ async function run() {
       res.send({ admin });
     });
 
-
     app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -164,6 +191,9 @@ async function run() {
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
+  } catch (error) {
+    console.error("MongoDB connection error:", error);
+    process.exit(1);
   } finally {
     // // Ensures that the client will close when you finish/error
     // await client.close();
