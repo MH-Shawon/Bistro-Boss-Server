@@ -1,25 +1,6 @@
-const express = require("express");
-const cors = require("cors");
-const app = express();
-require("dotenv").config();
 const jwt = require("jsonwebtoken");
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const port = process.env.PORT || 5000;
-
-app.use(cors());
-app.use(express.json());
-
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@clouster-1.fkyskeo.mongodb.net/?retryWrites=true&w=majority&appName=Clouster-1`;
-
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
-});
+const { ObjectId } = require("mongodb");
+const { client, app } = require(".");
 
 async function run() {
   try {
@@ -29,7 +10,6 @@ async function run() {
     const userCollection = client.db("RestaurantDB").collection("users");
 
     // jwt related api
-
     app.post("/jwt", async (req, res) => {
       const user = req.body;
 
@@ -40,7 +20,6 @@ async function run() {
     });
 
     // middleware
-
     const verifyToken = (req, res, next) => {
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "unauthorized access" });
@@ -69,7 +48,6 @@ async function run() {
     };
 
     // menu related api
-
     app.get("/menu", async (req, res) => {
       const menu = await menuCollection.find().toArray();
       res.send(menu);
@@ -132,22 +110,8 @@ async function run() {
       res.send(result);
     });
 
-    // payment intent 
-    app.post("/create-payment-intent", async(req, res)=>{
-      const {price} = req.body;
-      const amount = parseInt( price * 100);
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amount,
-        currency: "usd",
-        payment_method_types: ["card"],
-      });
-      res.send({
-        clientSecret: paymentIntent.client_secret
-      })
-    });
-
+    // payment intent
     // user related api
-
     app.post("/users", async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
@@ -188,7 +152,6 @@ async function run() {
     });
 
     // make user admin
-
     app.patch("/users/admin/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -213,12 +176,4 @@ async function run() {
     // await client.close();
   }
 }
-run().catch(console.dir);
-
-app.get("/", (req, res) => {
-  res.send("Hello Bistro World!");
-});
-
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
-});
+exports.run = run;
