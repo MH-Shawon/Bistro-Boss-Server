@@ -168,7 +168,7 @@ async function run() {
 
     // user related api
 
-    app.post("/users", async (req, res) => {
+    app.post("/users",  async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
       const existingUser = await userCollection.findOne(query);
@@ -179,12 +179,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
 
-    app.get("/users/admin/:email", async (req, res) => {
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
 
       if (email !== req.decoded.email) {
@@ -209,7 +209,7 @@ async function run() {
 
     // make user admin
 
-    app.patch("/users/admin/:id", verifyToken, async (req, res) => {
+    app.patch("/users/admin/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
