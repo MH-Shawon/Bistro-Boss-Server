@@ -59,7 +59,7 @@ async function run() {
 
     // use verify admin after verifyToken
     const verifyAdmin = async (req, res, next) => {
-      const email = req.decoded.email;
+      const email = req?.decoded?.email;
       const query = { email: email };
       const user = await userCollection.findOne(query);
       const isAdmin = user?.role === "admin";
@@ -168,7 +168,7 @@ async function run() {
 
     // user related api
 
-    app.post("/users",  async (req, res) => {
+    app.post("/users", async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
       const existingUser = await userCollection.findOne(query);
@@ -209,17 +209,87 @@ async function run() {
 
     // make user admin
 
-    app.patch("/users/admin/:id", verifyToken, verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updatedDoc = {
-        $set: {
-          role: "admin",
-        },
-      };
-      const result = await userCollection.updateOne(filter, updatedDoc);
-      res.send(result);
+    app.patch(
+      "/users/admin/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updatedDoc = {
+          $set: {
+            role: "admin",
+          },
+        };
+        const result = await userCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+      }
+    );
+
+    // admin analytics or stats
+
+    app.get("/admin-stats",verifyToken, verifyAdmin,  async (req, res) => {
+      const users = await userCollection.estimatedDocumentCount();
+      const menuItems = await menuCollection.estimatedDocumentCount();
+      const orders = await paymentCollection.estimatedDocumentCount();
+      // this is not the best way
+      // const payments = await paymentCollection.find().toArray();
+      // const revenue = payments.reduce((total, payment) => total + payment.price, 0);
+      const result = await paymentCollection
+        .aggregate([
+          {
+            $group: {
+              _id: null,
+              totalRevenue: { $sum: "$price" },
+            },
+          },
+        ])
+        .toArray();
+        const revenue = result.length>0? result[0].totalRevenue:0
+      res.send({ users, menuItems, orders, revenue });
     });
+
+
+   app.get("/order-stats", verifyToken, verifyAdmin, async (req, res) => {
+     const result = await paymentCollection
+       .aggregate([
+         {
+           $unwind: "$menuItemIds",
+         },
+         {
+           $lookup: {
+             from: "menu",
+             localField: "menuItemIds",
+             foreignField: "_id",
+             as: "menuItems",
+           },
+         },
+         {
+           $unwind: "$menuItems",
+         },
+         {
+           $group: {
+             _id: "$menuItems.category",
+             quantity: { $sum: 1 },
+             revenue: { $sum: "$menuItems.price" },
+           },
+         },
+         {
+           $project: {
+             _id: 0,
+             category: "$_id",
+             quantity: "$quantity",
+             revenue: "$revenue",
+           },
+         },
+       ])
+       .toArray();
+
+     res.send(result);
+   });
+  
+
+    
 
     client.db("admin").command({ ping: 1 });
     console.log(
